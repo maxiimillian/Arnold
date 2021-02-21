@@ -162,7 +162,7 @@ class ModerationCog(commands.Cog):
     @commands.check(has_moderator)
     @commands.check(not_blocked)
     async def mute(self, ctx, member: discord.Member, length, *, reason):
-        role_id = await GF.get_id(ctx.guild, "mute")
+        role_id = await GF.get_id(ctx.guild, "Muted")
         role = get(member.guild.roles, id=role_id)
 
         await member.add_roles(role, reason=reason, atomic=True)
@@ -181,7 +181,7 @@ class ModerationCog(commands.Cog):
     @commands.check(has_moderator)
     @commands.check(not_blocked)
     async def unmute(self, ctx, member: discord.Member):
-        role_id = await GF.get_id(ctx.guild, "mute")
+        role_id = await GF.get_id(ctx.guild, "Muted")
         role = get(member.guild.roles, id=role_id)
 
         await member.remove_roles(role, reason = "time's up ")
@@ -194,15 +194,16 @@ class ModerationCog(commands.Cog):
     @commands.command(name="ban")
     @commands.check(has_moderator)
     @commands.check(not_blocked)
-    async def ban(self, ctx, member: discord.Member, *, reason):
+    async def ban(self, ctx, member: discord.Member, speed, *, reason):
         if member.id == 344666116456710144:
             await ctx.send("you cant ban my master <:OB_pogO:737105405976772680>")
             return
-        await ctx.send("DRUMROLLLLL PLEASE.... <@{}> is being banned!".format(member.id))
-        await ctx.send("Banning <@{}> in: ".format(member.id))
-        for x in reversed(range(1, 6)):
-            await asyncio.sleep(1)
-            await ctx.send(str(x))
+        if speed == "slow":
+            await ctx.send("DRUMROLLLLL PLEASE.... <@{}> is being banned!".format(member.id))
+            await ctx.send("Banning <@{}> in: ".format(member.id))
+            for x in reversed(range(1, 6)):
+                await asyncio.sleep(1)
+                await ctx.send(str(x))
         await member.ban(reason=reason)
         #await create_log(ctx.author.id, member.id, ctx.invoked_subcommand, reason)
 
@@ -212,7 +213,7 @@ class ModerationCog(commands.Cog):
     @commands.check(has_moderator)
     @commands.check(not_blocked)
     async def dungeon(self, ctx, member: discord.Member, *, reason):
-        role_id = await GF.get_id(ctx.guild, "dungeon")
+        role_id = await GF.get_id(ctx.guild, "Dungoned")
         role = get(member.guild.roles, id=role_id)
 
         await member.add_roles(role, reason=reason, atomic=True)
@@ -227,7 +228,7 @@ class ModerationCog(commands.Cog):
     @commands.check(has_moderator)
     @commands.check(not_blocked)
     async def release(self, ctx, member: discord.Member):
-        role_id = await GF.get_id(ctx.guild, "dungeon")
+        role_id = await GF.get_id(ctx.guild, "Dungoned")
         role = get(member.guild.roles, id=role_id)
 
         await member.remove_roles(role, reason = "released")

@@ -1,3 +1,5 @@
+#Commands for every user
+#ToDo: Change all of the database entries into something using the user class
 import discord
 import asyncio
 import time
@@ -7,11 +9,14 @@ import os.path
 import wikipediaapi
 import json
 import praw
+import math
 from .GlobalFunctions import GlobalFunctions as GF
+from .classes.UserAccount import UserAccount
 from discord.utils import get
 
 from discord.ext import commands
 
+#Gets the absolute path to the database file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, "db.db")
 
@@ -19,24 +24,18 @@ class UserCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def checkUser(self, c, userId):
-        c.execute("SELECT * FROM team WHERE user_id=?", (userId,))
-        row = c.fetchone()
-
-        if row:
-            return False
-        return True
-
     async def not_blocked(ctx):
         return GF.check_block(ctx.author.id, ctx.command.name)
 
+    async def is_librarian(ctx):
+        return ctx.author.id == 344666116456710144 or ctx.author.id == 411930339523428364
 
     @commands.command(name="ob")
     @commands.check(not_blocked)
     async def ob(self, ctx, *, names):
+        #This is a personal emote server
         obServer = self.bot.get_guild(737104128777650217)
         names = names.split()
-        #I think i have to do this i had problems with the str idk
         response = ""
         for name in names:
             for emoji in obServer.emojis:
@@ -46,47 +45,332 @@ class UserCog(commands.Cog):
         await ctx.send(response)
         await ctx.message.delete()
 
+    @commands.command(name="remindme", aliases=["rm", "remind"])
+    @commands.check(not_blocked)
+    async def remindme(self, ctx, amount: int, unit: str, *, reminder: str):
+        to_seconds = {"second": 1, "minute": 60, "hour": 3600, "day": 86400, "week": 604800, "month": 2592000}
+        unit = unit.lower()
+
+        if unit.endswith('s'):
+            unit = unit[:-1]
+        if not unit in to_seconds:
+            await ctx.send("Unit must be seconds/minutes/hours/days/weeks/months")
+            return
+        if amount < 1:
+            await ctx.send("Amount must be greater than 0")
+            return
+        if len(reminder) > 1960:
+            await ctx.send("Reminder text is too long")
+            return
+
+        time_in_seconds = to_seconds[unit] * amount
+        remind_time = int(time.time()+time_in_seconds)
+
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+
+        c.execute("INSERT INTO reminders (user_id, time, reminder, channel_id) VALUES (?,?,?,?)", (ctx.author.id, remind_time, reminder, ctx.channel.id,))
+        conn.commit()
+        conn.close()
+
+        await ctx.send("Reminder set!")
+        return
+
+    @commands.group(pass_context=True)
+    @commands.check(not_blocked)
+    async def todo(self, ctx):
+        if ctx.invoked_subcommand is None:
+            msg = await ctx.send("Invalid use of todo command")
+            await asyncio.sleep(2)
+            await msg.delete()
+
+    @todo.command(pass_context=True)
+    @commands.check(not_blocked)
+    async def add(self, ctx, *, item):
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+
+        if len(item) > 200:
+            await ctx.send("Item name is too long")
+            return
+
+        c.execute("INSERT INTO todo (user_id, item) VALUES (?,?)", (ctx.author.id, item,))
+        conn.commit()
+        conn.close()
+
+        await ctx.send("Added to your ToDo List!")
+        return
+
+    @todo.command(pass_context=True, name="show")
+    @commands.check(not_blocked)
+    async def list(self, ctx):
+        try:
+            user = UserAccount(ctx.author.id)
+            todo_list = user.get_todo()
+            loop_count = 0
+            page_count = 0
+            text = ""
+            pages = []
+
+            if not todo_list:
+                await ctx.send("You have nothing on your list")
+                return
+
+            for todo_item in todo_list:
+                #text = text + f"{loopCount+1}: {todo_item[0]}"
+                if todo_item[2] == "crossed":
+                    text = text + f"\n~~{todo_item[1]}: {todo_item[0]}~~"
+                else:
+                    text = text + f"\n{todo_item[1]}: {todo_item[0]}"
+
+                loop_count += 1
+                if loop_count % 10 == 0 or loop_count-1 == len(todo_list)-1:
+                    embed = discord.Embed(colour=0xc7e6a7)
+
+                    embed.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.avatar_url)
+                    embed.add_field(name="\u200b",value=text, inline=False)
+                    embed.set_footer(text=f"Page {len(pages)}/{math.floor(len(todo_list)/10)} ({len(todo_list)} items)")
+
+                    pages.append(embed)
+                    text = ""
+
+            embed_msg = await ctx.send(embed=pages[page_count])
+            await embed_msg.add_reaction("◀️")
+            await embed_msg.add_reaction("▶️")
+
+            def check(reaction, user):
+                return user == ctx.author and reaction.message == embed_msg
+
+            while True:
+                try:
+                    reaction, user = await self.bot.wait_for("reaction_add", timeout=60.0, check=check)
+                except asyncio.TimeoutError:
+                    await embed_msg.clear_reaction("◀️")
+                    await embed_msg.clear_reaction("▶️")
+                    return
+                else:
+                    if str(reaction) == "▶️":
+                        try:
+                            await embed_msg.edit(embed=pages[page_count+1])
+                        except:
+                            continue
+                        page_count += 1
+                    elif str(reaction) == "◀️":
+                        try:
+                            await embed_msg.edit(embed=pages[page_count-1])
+                        except:
+                            continue
+                        page_count -= 1
+
+        except Exception as e:
+            await ctx.send(e)
+
+    @todo.command(pass_context=True)
+    @commands.check(not_blocked)
+    async def delete(self, ctx, id: int=None):
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+
+
+            c.execute("DELETE FROM todo WHERE id=? AND user_id=?", (id, ctx.author.id,))
+            conn.commit()
+            conn.close()
+
+            await ctx.send("It's deleted!")
+            return
+        except Exception as e:
+            await ctx.send(e)
+
+    @todo.command(pass_context=True)
+    @commands.check(not_blocked)
+    async def cross(self, ctx, id: int):
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+
+
+            c.execute("UPDATE todo SET status=? WHERE id=? AND user_id=?", ("crossed", id, ctx.author.id,))
+            conn.commit()
+            conn.close()
+
+            await ctx.send("It's crossed out!")
+            return
+        except Exception as e:
+            await ctx.send(e)
+
+    @todo.command(pass_context=True)
+    @commands.check(not_blocked)
+    async def uncross(self, ctx, id: int):
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+
+
+            c.execute("UPDATE todo SET status=? WHERE id=? AND user_id=?", ("uncrossed", id, ctx.author.id,))
+            conn.commit()
+            conn.close()
+
+            await ctx.send("It's uncrossed!")
+            return
+        except Exception as e:
+            await ctx.send(e)
+
+    @commands.group(pass_context=True)
+    @commands.check(not_blocked)
+    @commands.is_owner()
+    async def lib(self, ctx):
+        if ctx.invoked_subcommand is None:
+            msg = await ctx.send("Invalid use of lib command")
+            await asyncio.sleep(2)
+            await msg.delete()
+
+    @lib.command(pass_context=True)
+    @commands.check(not_blocked)
+    @commands.check(is_librarian)
+    async def add(self, ctx, isbn, *, title):
+        path = os.path.abspath("Arnold/cogs/files/")
+        try:
+            files = ctx.message.attachments
+            if not files:
+                await ctx.send("You must have a pdf attachment")
+                return
+            if len(files) > 1 or files[0].size > 5000000 or not files[0].filename.endswith((".pdf", ".epub", ".mobi")):
+                await ctx.send("You must have a single pdf less than 2mb")
+                return
+
+            await files[0].save(f"{path}/{files[0].filename}")
+
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+
+            c.execute("INSERT INTO books (isbn, title, filename) VALUES (?,?,?)", (isbn, title, files[0].filename,))
+            conn.commit()
+        except Exception as e:
+            await ctx.send(e)
+
+    @lib.command(pass_context=True)
+    @commands.check(not_blocked)
+    async def get(self, ctx, *, query):
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+
+        c.execute("SELECT * FROM books WHERE isbn=? or title=?", (query, query,))
+        row = c.fetchone()
+
+        if not row:
+            await ctx.send("Can't find that in my library")
+            return
+
+        path = os.path.abspath(f"Arnold/cogs/files/{row[3]}")
+
+        with open(path, "rb") as file:
+            await ctx.send("Heres your file: ", file=discord.File(file, row[3]))
+
+    @lib.command(pass_context=True)
+    @commands.check(not_blocked)
+    async def show(self, ctx):
+        try:
+            loop_count = 0
+            page_count = 0
+            text = ""
+            pages = []
+
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+
+            c.execute("SELECT * FROM books")
+            book_list = c.fetchall()
+
+            if not book_list:
+                await ctx.send("The library is empty :(")
+                return
+
+            for book in book_list:
+                text = text + f"\n{book[2]}"
+
+                loop_count += 1
+                if loop_count % 10 == 0 or loop_count-1 == len(book_list)-1:
+                    embed = discord.Embed(colour=0xc7e6a7, title="The Library")
+
+                    embed.add_field(name="\u200b",value=text, inline=False)
+                    embed.set_footer(text=f"Page {len(pages)}/{math.floor(len(book_list)/10)} ({len(book_list)} items)")
+
+                    pages.append(embed)
+                    text = ""
+
+            embed_msg = await ctx.send(embed=pages[page_count])
+            await embed_msg.add_reaction("◀️")
+            await embed_msg.add_reaction("▶️")
+
+            def check(reaction, user):
+                return user == ctx.author and reaction.message == embed_msg
+
+            while True:
+                try:
+                    reaction, user = await self.bot.wait_for("reaction_add", timeout=60.0, check=check)
+                except asyncio.TimeoutError:
+                    await embed_msg.clear_reaction("◀️")
+                    await embed_msg.clear_reaction("▶️")
+                    return
+                else:
+                    if str(reaction) == "▶️":
+                        try:
+                            await embed_msg.edit(embed=pages[page_count+1])
+                        except:
+                            continue
+                        page_count += 1
+                    elif str(reaction) == "◀️":
+                        try:
+                            await embed_msg.edit(embed=pages[page_count-1])
+                        except:
+                            continue
+                        page_count -= 1
+
+        except Exception as e:
+            await ctx.send(e)
+
+
+
     @commands.command(name="pomodoro")
     @commands.check(not_blocked)
     async def pomodoro(self, ctx, cycles: int):
-        user = UserAccount(ctx.author.id)
-        for x in range(cycles):
-            breakTime = 0
-            pomRole = get(ctx.guild.roles, name="Pomodoro 🍅")
-            adminRoles = []
+        try:
+            user = UserAccount(ctx.author.id)
+            for x in range(cycles):
+                breakTime = 0
+                sleepTime = 0
 
-            user.add_pomodoro(1)
-            await ctx.send("Starting cycle {} 25 minutes".format(str(x+1)))
+                role_id = await GF.get_id(ctx.guild, "Pomodoro")
+                role = get(ctx.author.guild.roles, id=role_id)
 
-            await ctx.author.add_roles(pomRole, reason="Pomodoro", atomic=True)
+                user.add_pomodoro(1)
 
-            for role in ctx.author.roles:
-                if role.permissions.administrator:
-                    try:
-                        await ctx.author.remove_roles(role, reason="Pomodoro Block")
-                        adminRoles.append(role)
-                    except:
-                        continue
+                await ctx.send(f"{ctx.author.mention} Starting Cycle {x+1}")
+                await asyncio.sleep(60*25)
 
-            await asyncio.sleep(10)
+                if (x+1) % 4 == 0:
+                    breakTime = 60*25
+                    await ctx.send(f"{ctx.author.mention} Starting Break (25 Minutes)")
+                else:
+                    breakTime = 60*5
+                    await ctx.send(f"{ctx.author.mention} Starting Break (5 Minutes)")
 
-            await ctx.author.remove_roles(pomRole, reason="Pomodoro", atomic=True)
+                await asyncio.sleep(breakTime)
 
-            for role in adminRoles:
-                await ctx.author.add_roles(role, reason="Pomodoro Unblock", atomic=True)
+            await ctx.author.remove_roles(role, reason="Pomodoro Over", atomic=True)
+            await ctx.send(f"{ctx.author.mention} your Pomodoro is over! You now have a score of {user.get_pomodoro()}")
+        except Exception as e:
+            await ctx.send(e)
 
-            if x % 4 == 0:
-                breakTime = 60 * 25
-                await ctx.send("Starting break {} (25 minutes)".format(str(x+1)))
-
-            breakTime = 60 * 5
-            await ctx.send("Starting break {} (5 minutes)".format(str(x+1)))
-            await asyncio.sleep(breakTime)
+    @commands.command(name="github")
+    @commands.check(not_blocked)
+    async def github(self, ctx):
+        await ctx.send("https://github.com/Wenis77/Arnold")
 
     @commands.command(name="wiki")
     @commands.check(not_blocked)
     async def wiki(self, ctx, *, search):
-
         loopCount = 0
         wiki_wiki = wikipediaapi.Wikipedia('en')
         page = wiki_wiki.page(search)
@@ -95,14 +379,17 @@ class UserCog(commands.Cog):
             await ctx.send("Page doesn't exist")
             return
 
+        #If there are more than one wiki articles for a topic then give 8 options
         if len(page.sections) > 1:
             embed = discord.Embed(name='Sections', description="Pick one of these sections", colour=0xc7e6a7)
             for s in page.sections:
                 if loopCount > 8: break;
                 embed.add_field(name=str(loopCount), value=s.title, inline=False)
                 loopCount+=1
+
             await ctx.send(embed=embed)
 
+            #Recieving the section number from the author
             def check(m):
                 return m.author == ctx.author and m.channel == ctx.channel
             try:
@@ -114,6 +401,7 @@ class UserCog(commands.Cog):
                     section = page.sections[int(msg.content)]
                     embed = discord.Embed(name=section.title, colour=0xc7e6a7)
                     embed.add_field(name="Results: ", value=section.text[0:400] + "...")
+
                     await ctx.send(embed=embed)
                 except Exception as e:
                     print("ERR: ", e)
@@ -128,6 +416,7 @@ class UserCog(commands.Cog):
     @commands.command(name="meme")
     @commands.check(not_blocked)
     async def meme(self, ctx):
+        #Retrive api info (hidden)
         secret = GF.get_value("reddit-secret")
         id = GF.get_value("reddit-personal")
 
@@ -142,7 +431,7 @@ class UserCog(commands.Cog):
         return
 
 
-
+    #Currently bans but might be better to risk money or a mute
     @commands.command(name="roulette")
     @commands.check(not_blocked)
     async def roulette(self, ctx):
@@ -153,170 +442,29 @@ class UserCog(commands.Cog):
 
         else:
             await ctx.send("You're safe!")
-            #conn = sqlite3.connect(db_path)
-            #c = conn.cursor()
-            #print(ctx.author.id)
-            #c.execute("UPDATE users SET balance=balance + ? WHERE user_id=?", (1000, ctx.author.id,))
-            #conn.commit()
 
-    @commands.group(pass_context=True)
+    @commands.command(name="leaderboard")
     @commands.check(not_blocked)
-    async def money(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send("Invalid use of money command")
-
-    #@commands.command(name="leaderboard")
-    #@commands.check(not_blocked)
     async def leaderboard(self, ctx, type):
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
+        loopCheck = 0
 
         try:
-            c.execute("SELECT user_id, {} FROM users ORDER BY {} DESC LIMIT 5".format(type, type))
+            c.execute("SELECT user_id, {} FROM users ORDER BY {} DESC".format(type, type))
             top = c.fetchall()
 
             embed = discord.Embed(title="Leaderboard for {}".format(type))
             for user in top:
-                embed.add_field(name=self.bot.get_user(user[0]).name, value="Amount: {}".format(user[1]), inline=False)
+                if loopCheck == 5: break;
+                searchUser = self.bot.get_user(user[0])
+                if not searchUser in ctx.guild.members: continue;
+                embed.add_field(name=f"#{loopCheck+1}: {self.bot.get_user(user[0]).name}", value=f"Amount: {user[1]}", inline=False)
+                loopCheck += 1
+
             await ctx.send(embed=embed)
         except sqlite3.OperationalError:
             await ctx.send("There is no leaderboard for that type")
-
-    @money.command(pass_context=True)
-    @commands.check(not_blocked)
-    async def balance(self, ctx):
-        conn = sqlite3.connect(db_path)
-        c = conn.cursor()
-        c.execute("SELECT * FROM users WHERE user_id=?", (ctx.author.id,))
-        row = c.fetchall()
-
-        await ctx.send("You have {} coins".format(row[0][2]))
-
-    @commands.group(pass_context=True)
-    @commands.check(not_blocked)
-    async def tourney(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send("Invalid use of tourney command")
-
-    @tourney.command(pass_context=True)
-    @commands.check(not_blocked)
-    async def show(self, ctx, name, round):
-        conn = sqlite3.connect(db_path)
-        c = conn.cursor()
-
-        c.execute("SELECT * FROM tournaments WHERE name=?", (name,))
-        tournament = c.fetchone()
-        tournamentId = tournament[0]
-
-        c.execute("SELECT * FROM matches WHERE tourney_id=? AND round=?", (tournamentId, int(round),))
-        matches = c.fetchall()
-
-
-        embed = discord.Embed(title=("Tournament: {}".format(tournament[1])), colour=0xc7e6a7)
-        for match in matches:
-            embed.add_field(name="Team 1", value="<@{}>".format(str(match[2])), inline=True)
-            embed.add_field(name="\u200b", value="\u200b", inline=True)
-            embed.add_field(name="Team 2", value="<@{}>".format(str(match[3])), inline=True)
-            embed.add_field(name="\u200b", value="\u200b", inline=False)
-        await ctx.send(embed=embed)
-
-    @tourney.command(pass_context=True)
-    @commands.check(not_blocked)
-    async def create(self, ctx, name, users: int):
-
-
-        if not (users & (users-1) == 0) or users < 4:
-            await ctx.send("User count must be at least 4 and a power of 2")
-            return
-
-
-        tourney = []
-        conn = sqlite3.connect(db_path)
-        c = conn.cursor()
-
-        c.execute("SELECT 1 FROM tournaments WHERE host_id=?", (ctx.author.id,))
-        row = c.fetchone()
-
-        if row != None:
-            await ctx.send("You're already hosting a tourney!")
-            return
-
-        if await self.checkUser(c, ctx.author.id): c.execute("INSERT INTO team (name, user_id, wins) VALUES (?, ?, 0)", (ctx.author.name, ctx.author.id,))
-        c.execute("INSERT INTO tournaments (name, host_id, rounds) VALUES (?, ?, ?)", (name, ctx.author.id, users))
-        c.execute("SELECT 1 FROM tournaments WHERE host_id=?", (ctx.author.id,))
-        row = c.fetchone()
-        tourneyId = row[0]
-
-
-
-
-        matchCount = users / 2
-        roundCount = 1
-        while matchCount >= 1:
-            for x in range (int(matchCount)):
-                print(x)
-                c.execute("INSERT INTO matches (tourney_id, round) VALUES (?, ?)", (tourneyId,roundCount,))
-            matchCount = matchCount / 2
-            roundCount += 1
-
-                #matches["match_" + str(x)] = {"player_one": "null", "player_two": "null"}
-
-            #tourney[x] = matches
-
-
-        conn.commit()
-        await ctx.send("Tournament {} has been created, make sure to get {} to join".format(name, str(users)))
-
-
-    @tourney.command(pass_context=True)
-    @commands.check(not_blocked)
-    async def join(self, ctx, tourneyName):
-        conn = sqlite3.connect(db_path)
-        c = conn.cursor()
-
-        if await self.checkUser(c, ctx.author.id): c.execute("INSERT INTO team (name, user_id, wins) VALUES (?, ?, 0)", (ctx.author.name, ctx.author.id,))
-        c.execute("SELECT 1 FROM tournaments WHERE name=?", (tourneyName,))
-        row = c.fetchone()
-
-        if not row:
-            await ctx.send("That tournament doesn't exist!")
-            return
-
-        tourneyId = row[0]
-
-        c.execute("SELECT 1 FROM matches WHERE tourney_id=? AND team_1=? OR team_2=?", (tourneyId,ctx.author.id, ctx.author.id,))
-        row = c.fetchone()
-
-        if row:
-            await ctx.send("You're already in it!")
-            return
-
-
-        sql = """
-            UPDATE
-                matches
-            SET team_{}= ?
-            WHERE id = (
-                SELECT MIN(id)
-                FROM matches
-                WHERE (team_{} IS NULL)
-            )
-            AND
-            tourney_id=?
-        """
-        c.execute(sql.format("1", "1"), (ctx.author.id,tourneyId,))
-
-        if c.rowcount < 1:
-
-            c.execute(sql.format("2", "2"), (ctx.author.id,tourneyId,))
-            if c.rowcount < 1:
-                await ctx.send("Tourney is full!")
-                return
-
-        conn.commit()
-        await ctx.send("You have joined the tourney {}".format(tourneyName))
-        return
-
 
     @commands.command(name="suggest")
     @commands.check(not_blocked)
@@ -326,11 +474,13 @@ class UserCog(commands.Cog):
 
         c.execute("INSERT INTO suggestions (user_id, suggestion, status) VALUES (?, ?, ?)", (ctx.author.id, suggestion, "incomplete"))
         conn.commit()
+
         await ctx.send("Your suggestion has been dumped in the trash!")
 
     @commands.command(name="fortune")
     @commands.check(not_blocked)
     async def fortune(self, ctx):
+        #Just an array of fortuntes as a string
         with open("imports.json", 'r') as f:
             json_data = json.load(f)
             fortunes = json_data["fortunes"]

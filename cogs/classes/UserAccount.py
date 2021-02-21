@@ -94,6 +94,14 @@ class UserAccount:
 
         return stocks
 
+    def get_todo(self):
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+
+        c.execute("SELECT item, id, status FROM todo WHERE user_id=? ORDER BY id ASC", (self.id,))
+        todo_list = c.fetchall()
+
+        return todo_list
 
 
 
@@ -114,6 +122,15 @@ class UserAccount:
         c.execute(sql, (amount, self.id,))
         conn.commit()
         conn.close()
+
+    def get_pomodoro(self):
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+
+        c.execute("SELECT pomodoro FROM users WHERE user_id=?", (self.id,))
+        score = c.fetchone()[0]
+
+        return score
 
     def blocked_commands(self):
         sql = "SELECT command FROM blocked WHERE user_id=?"

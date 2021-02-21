@@ -1,6 +1,7 @@
 from discord.ext import commands
 import discord
 import datetime
+import time
 import sqlite3
 import os
 import asyncio
@@ -15,8 +16,6 @@ print("PATH: ", db_path)
 class Events(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-# Wenis is gay, and cringe. Gluce was here.
 
     async def is_server(self, ctx):
         return ctx.guild.id == 774751718754877480
@@ -42,44 +41,38 @@ class Events(commands.Cog):
         print('Ready!')
         print('Logged in as ---->', self.bot.user)
         print('ID:', self.bot.user.id)
-        print()
 
         game = discord.Game("with the ban command!")
-        await self.bot.change_presence(status=discord.Status.idle, activity=game)
-
-        news_channel = self.bot.get_channel(803014275445948436)
-
-        url = "https://newscatcher.p.rapidapi.com/v1/latest_headlines"
-
-        querystring = {"lang":"en","media":"True"}
-
-        headers = {
-            'x-rapidapi-key': "96a071e9fdmsh57907bfaf371ddap156ac1jsn94803889484b",
-            'x-rapidapi-host': "newscatcher.p.rapidapi.com"
-            }
-        print("requesting")
+        await self.bot.change_presence(status=discord.Status.online, activity=game)
 
         while True:
-            try:
-                articles = []
-                response = requests.request("GET", url, headers=headers, params=querystring)
-                articles = response.json()["articles"]
-                for article in articles:
-                    embed = discord.Embed(title=article["title"], colour=0xc7e6a7, timestamp=datetime.datetime.strptime(article["published_date"], "%Y-%m-%d %H:%M:%S"))
-                    embed.add_field(name="Summary", value=article["summary"][0:250] + "...", inline=False)
-                    embed.add_field(name="Link", value="[Source]({})".format(article["link"]))
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            myGen = self.bot.get_channel(503741758564335621)
 
-                    if article["media_content"] != None:
-                        embed.set_thumbnail(url=article["media_content"])
+            c.execute("SELECT * FROM reminders WHERE time < ?", (int(time.time()),))
+            rows = c.fetchall()
 
-                    await news_channel.send(embed=embed)
-                    await asyncio.sleep(60*5)
-            except Exception as e:
-                print(e)
-                pass
+            for row in rows:
+                try:
+                    id = row[0]
+                    user_id = row[1]
+                    reminder = row[3]
+                    channel_id = row[4]
 
-            await asyncio.sleep(60*5)
+                    channel = self.bot.get_channel(channel_id)
+                    user = self.bot.get_user(user_id)
 
+                    c.execute("DELETE FROM reminders WHERE id=?", (id,))
+                    conn.commit()
+
+                    await channel.send(f"{user.mention} {reminder}")
+                except Exception as e:
+                    await myGen.send(e)
+                    continue
+
+
+            await asyncio.sleep(1)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):

@@ -1,5 +1,5 @@
 import discord
-from .GlobalFunctions import GlobalFunctions as GF
+from cogs.GlobalFunctions import GlobalFunctions as GF
 import sqlite3
 import os
 from discord.ext import commands
@@ -13,8 +13,6 @@ token = GF.get_value("token")
 
 #Allows all intents, you may want to change this for your own uses
 intents = discord.Intents().all()
-
-bot = commands.Bot(command_prefix=get_prefix, intents=intents)
 
 #Files in cogs that should be ignored on initial loading
 ignore_list = ["GlobalFunctions.py"]
@@ -32,6 +30,8 @@ def get_prefix(bot, message):
             return result[0]
         else:
             return '$'
+
+bot = commands.Bot(command_prefix=get_prefix, intents=intents)
 
 #Loads the cogs
 if __name__ == '__main__':

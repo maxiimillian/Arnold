@@ -1,5 +1,4 @@
 import discord
-import os
 from .GlobalFunctions import GlobalFunctions as GF
 import sqlite3
 import os

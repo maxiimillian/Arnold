@@ -42,4 +42,4 @@ if __name__ == '__main__':
             print("Loaded: {}".format(file))
 
 
-bot.run(,bot=True, reconnect=True)
+bot.run(token, bot=True, reconnect=True)

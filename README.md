@@ -15,7 +15,6 @@ A multi-purpose open-source Discord Bot written in Python.
 - Other (server leaderboards for balance/score/pomodoros, search wikipedia articles, make suggestions to owner, ebook library)
 
 ## Setup
-========
 
 To install necesarry libraries run
 ```bash

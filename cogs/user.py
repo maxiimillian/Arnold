@@ -10,6 +10,7 @@ import wikipediaapi
 import json
 import praw
 import math
+from PyPDF2 import PdfFileReader
 from .GlobalFunctions import GlobalFunctions as GF
 from .classes.UserAccount import UserAccount
 from discord.utils import get
@@ -29,6 +30,9 @@ class UserCog(commands.Cog):
 
     async def is_librarian(ctx):
         return ctx.author.id == 344666116456710144 or ctx.author.id == 411930339523428364
+
+    def to_lower(arg):
+        return arg.lower()
 
     @commands.command(name="ob")
     @commands.check(not_blocked)
@@ -76,6 +80,24 @@ class UserCog(commands.Cog):
         await ctx.send("Reminder set!")
         return
 
+    @commands.command(name="td", hidden=True)
+    @commands.check(not_blocked)
+    async def td(self, ctx, type: to_lower):
+        path = os.path.abspath("Arnold/cogs/hidden.json")
+        try:
+            if type == "truth" or type == "t":
+                with open(path, 'r') as f:
+                    json_data = json.load(f)
+                    truths = json_data["truth"]
+                    await ctx.send(random.choice(truths))
+            elif type == "dare" or type == "d":
+                with open(path, 'r') as f:
+                    json_data = json.load(f)
+                    dares = json_data["dare"]
+                    await ctx.send(random.choice(dares))
+        except Exception as e:
+            await ctx.send(e)
+
     @commands.group(pass_context=True)
     @commands.check(not_blocked)
     async def todo(self, ctx):
@@ -84,9 +106,9 @@ class UserCog(commands.Cog):
             await asyncio.sleep(2)
             await msg.delete()
 
-    @todo.command(pass_context=True)
+    @todo.command(pass_context=True, name="add")
     @commands.check(not_blocked)
-    async def add(self, ctx, *, item):
+    async def todoadd(self, ctx, *, item):
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
 
@@ -101,9 +123,9 @@ class UserCog(commands.Cog):
         await ctx.send("Added to your ToDo List!")
         return
 
-    @todo.command(pass_context=True, name="show")
+    @todo.command(pass_context=True, name="show", aliases=["list"])
     @commands.check(not_blocked)
-    async def list(self, ctx):
+    async def todoshow(self, ctx):
         try:
             user = UserAccount(ctx.author.id)
             todo_list = user.get_todo()
@@ -165,9 +187,9 @@ class UserCog(commands.Cog):
         except Exception as e:
             await ctx.send(e)
 
-    @todo.command(pass_context=True)
+    @todo.command(pass_context=True, name="remove")
     @commands.check(not_blocked)
-    async def delete(self, ctx, id: int=None):
+    async def todoremove(self, ctx, id: int=None):
         try:
             conn = sqlite3.connect(db_path)
             c = conn.cursor()
@@ -218,7 +240,6 @@ class UserCog(commands.Cog):
 
     @commands.group(pass_context=True)
     @commands.check(not_blocked)
-    @commands.is_owner()
     async def lib(self, ctx):
         if ctx.invoked_subcommand is None:
             msg = await ctx.send("Invalid use of lib command")
@@ -246,6 +267,8 @@ class UserCog(commands.Cog):
 
             c.execute("INSERT INTO books (isbn, title, filename) VALUES (?,?,?)", (isbn, title, files[0].filename,))
             conn.commit()
+
+            await ctx.send("It's been added!")
         except Exception as e:
             await ctx.send(e)
 
@@ -287,7 +310,8 @@ class UserCog(commands.Cog):
                 return
 
             for book in book_list:
-                text = text + f"\n{book[2]}"
+
+                text = text + f"\n`{book[2]}`"
 
                 loop_count += 1
                 if loop_count % 10 == 0 or loop_count-1 == len(book_list)-1:

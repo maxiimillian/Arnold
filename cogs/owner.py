@@ -26,24 +26,10 @@ class OwnerCog(commands.Cog):
         c.execute("SELECT * FROM users WHERE user_id=?", (id,))
         return c.fetchone()
 
-    @commands.command("based")
-    @commands.is_owner()
-    async def based(self, ctx, user: discord.Member):
-        role = dungoned = get(ctx.author.guild.roles, id=int(800213592933662770))
-        await user.add_roles(role, reason="they're based", atomic=True)
-
-        await ctx.send("{} has declared you based!".format(user.mention))
-
-    @commands.command("wenis")
-    @commands.is_owner()
-    async def wenis(self, ctx):
-        role = dungoned = get(ctx.author.guild.roles, id=int(774753944701894658))
-        await ctx.author.add_roles(role, reason="they're based", atomic=True)
-
     @commands.command("banrole")
     @commands.is_owner()
-    async def banrole(self, ctx, roleId):
-        role = dungoned = get(ctx.author.guild.roles, id=int(roleId))
+    async def banrole(self, ctx, roleId: int):
+        role = dungoned = get(ctx.author.guild.roles, id=roleId)
         to_ban = role.members
 
         for member in to_ban:
@@ -67,7 +53,7 @@ class OwnerCog(commands.Cog):
 
     @commands.command("block")
     @commands.is_owner()
-    async def block(self, ctx, id, command):
+    async def block(self, ctx, id: int, command):
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
 
@@ -75,12 +61,12 @@ class OwnerCog(commands.Cog):
         c.execute("INSERT INTO blocked (user_id, command) VALUES (?,?)", (id,command,))
         conn.commit()
 
-        await ctx.send("{} has been blocked from the {} command".format(self.bot.get_user(int(id)).mention, command))
+        await ctx.send("{} has been blocked from the {} command".format(self.bot.get_user(id).mention, command))
         return
 
     @commands.command("unblock")
     @commands.is_owner()
-    async def block(self, ctx, id, command):
+    async def block(self, ctx, id: int, command):
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
 
@@ -88,7 +74,7 @@ class OwnerCog(commands.Cog):
         c.execute("DELETE FROM blocked WHERE user_id=? AND command=?", (id,command,))
         conn.commit()
 
-        await ctx.send("{} has been unblocked from the {} command".format(self.bot.get_user(int(id)).mention, command))
+        await ctx.send("{} has been unblocked from the {} command".format(self.bot.get_user(id).mention, command))
         return
 
 
@@ -130,8 +116,8 @@ class OwnerCog(commands.Cog):
 
     @commands.command(name='talk', hidden=True)
     @commands.is_owner()
-    async def talk(self, ctx, channelId):
-        channel = self.bot.get_channel(int(channelId))
+    async def talk(self, ctx, channelId: int):
+        channel = self.bot.get_channel(channelId)
 
         def check(m):
             return True
@@ -152,15 +138,12 @@ class OwnerCog(commands.Cog):
     @commands.command(name='colour', hidden=True)
     @commands.is_owner()
     async def colour(self, ctx, roleName, colour):
-        role = get(ctx.guild.roles, name=roleName)
+        try:
+            role = get(ctx.guild.roles, name=roleName)
+        except:
+            await ctx.send("That role doesn't exist")
+            return
         await role.edit(color=int(colour, 16))
-        return
-
-    @commands.command(name='join', hidden=True)
-    @commands.is_owner()
-    async def join(self, ctx):
-        channel = self.bot.get_channel(774766074675200020)
-        await channel.connect()
 
     @commands.command(name='create', hidden=True)
     @commands.is_owner()
@@ -169,43 +152,6 @@ class OwnerCog(commands.Cog):
         await role.edit(color=int(colour, 16))
         await ctx.send(f"Role {name} was created")
         return
-
-    @commands.command(name='voice', hidden=True)
-    @commands.is_owner()
-    async def voice(self, ctx):
-        mytext = "Hi guys "
-        language = "en"
-        FFMPEG_OPTS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
-
-        voiceState = ctx.author.voice
-        if voiceState is None:
-            return await ctx.send("Youre not in a voice channel")
-
-        channel = ctx.author.voice.channel
-        voiceClient = get(self.bot.voice_clients, guild=ctx.guild)
-        if voiceClient and voiceClient.is_connected():
-            await voiceClient.move_to(channel)
-        else:
-            vc = await channel.connect()
-
-        async def check(m):
-            return True
-
-        while (True):
-            m = await self.bot.wait_for('message', check=check)
-
-            if m.author == ctx.author and m.channel == ctx.channel:
-                if m.content == "$end":
-                    await channel.disconnect()
-                    return
-                else:
-                    myobj = gTTS(text=m.content, lang=language, slow=False)
-                    myobj.save("arnold.mp3")
-                    vc.play(discord.FFmpegPCMAudio(executable="C:/ffmpeg/bin/ffmpeg.exe", source='arnold.mp3'), after=lambda e:print("done", e))
-                    while vc.is_playing():
-                        await asyncio.sleep(1)
-                    vc.stop()
-                    continue
 
     @commands.is_owner()
     @commands.group(pass_context=True)
@@ -252,6 +198,7 @@ class OwnerCog(commands.Cog):
             return
         else:
             await ctx.send("Suggestion doesn't exist")
+            
     @suggestions.command(pass_context=True)
     @commands.is_owner()
     async def delete(self, ctx, id: int):

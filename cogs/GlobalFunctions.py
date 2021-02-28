@@ -31,7 +31,7 @@ class GlobalFunctions:
 
 
     def get_value(key):
-        with open("C:/Users/frogg/Desktop/Arnold/cogs/hidden.json") as f:
+        with open(os.path.join(BASE_DIR, "hidden.json")) as f:
             return json.load(f)[key]
 
     async def get_id(guild, type):

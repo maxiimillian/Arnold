@@ -21,8 +21,6 @@ To install necesarry libraries run
 python -m pip install -r requirements.txt
 ```
 
-To create the sqlite database run dbsetup.bat
-
 You will need to add your token to the hidden.json file as well as your reddit credentials if you wish to use the meme command
 
 Next run

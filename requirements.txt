@@ -1,5 +1,4 @@
 discord.py
-sqlite3
 wikipedia-api
 praw
 PyPDF2

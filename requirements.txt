@@ -1,5 +1,0 @@
-discord.py
-wikipedia-api
-praw
-PyPDF2
-lxml

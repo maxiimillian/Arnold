@@ -55,18 +55,6 @@ class Economy(commands.Cog):
         else:
             await ctx.send("You don't have {}".format(amount))
 
-    @commands.command(name="expropriate", aliases=["ex"])
-    @commands.is_owner()
-    async def expropriate(self, ctx, user: discord.Member, amount: int):
-        reciever = UserAccount(ctx.author.id)
-        sender = UserAccount(user.id)
-        if (sender.get_balance()) >= amount:
-            sender.change_money(amount, "remove")
-            reciever.change_money(amount, "add")
-            await ctx.send(f"You expropriated {amount} from {user.name}")
-        else:
-            await ctx.send("They don't have {}".format(amount))
-
     @commands.command(name="balance", aliases=["bal", "amount"])
     async def balance(self, ctx, target: discord.Member=None):
         if target is None:

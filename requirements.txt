@@ -1,8 +1,5 @@
 discord.py
-os
-sqlite3
 wikipedia-api
 praw
 PyPDF2
-requests
 lxml

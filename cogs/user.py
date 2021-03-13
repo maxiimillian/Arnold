@@ -11,7 +11,7 @@ import json
 import praw
 import math
 from PyPDF2 import PdfFileReader
-from .GlobalFunctions import GlobalFunctions as GF
+from .lib import check_block, get_value, get_id
 from .classes.UserAccount import UserAccount
 from discord.utils import get
 
@@ -26,7 +26,7 @@ class UserCog(commands.Cog):
         self.bot = bot
 
     async def not_blocked(ctx):
-        return GF.check_block(ctx.author.id, ctx.command.name)
+        return check_block(ctx.author.id, ctx.command.name)
 
     async def is_librarian(ctx):
         return ctx.author.id == 344666116456710144 or ctx.author.id == 411930339523428364
@@ -365,7 +365,7 @@ class UserCog(commands.Cog):
                 breakTime = 0
                 sleepTime = 0
 
-                role_id = await GF.get_id(ctx.guild, "Pomodoro")
+                role_id = await get_id(ctx.guild, "Pomodoro")
                 role = get(ctx.author.guild.roles, id=role_id)
 
                 user.add_pomodoro(1)
@@ -441,8 +441,8 @@ class UserCog(commands.Cog):
     @commands.check(not_blocked)
     async def meme(self, ctx):
         #Retrive api info (hidden)
-        secret = GF.get_value("reddit-secret")
-        id = GF.get_value("reddit-personal")
+        secret = get_value("reddit-secret")
+        id = get_value("reddit-personal")
 
         reddit = praw.Reddit(client_id=id, client_secret=secret, user_agent="Retrieves top posts from meme subreddits")
 

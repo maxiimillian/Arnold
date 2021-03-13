@@ -1,5 +1,5 @@
 import discord
-from cogs.GlobalFunctions import GlobalFunctions as GF
+from cogs.lib import get_value
 import sqlite3
 import os
 from discord.ext import commands
@@ -9,13 +9,13 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, "cogs/db.db")
 
 #Put your token in hidden.json
-token = GF.get_value("token")
+token = get_value("token")
 
 #Allows all intents, you may want to change this for your own uses
 intents = discord.Intents().all()
 
 #Files in cogs that should be ignored on initial loading
-ignore_list = ["GlobalFunctions.py"]
+ignore_list = ["lib.py"]
 
 
 #==============GETS SERVER SPECIFIC PREFIX==============

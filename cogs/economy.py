@@ -6,7 +6,7 @@ import os
 import requests
 import asyncio
 from lxml import html
-from .GlobalFunctions import GlobalFunctions as GF
+from .lib import check_block
 from .classes.UserAccount import UserAccount
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -17,7 +17,7 @@ class Economy(commands.Cog):
         self.bot = bot
 
     async def not_blocked(ctx):
-        return GF.check_block(ctx.author.id, ctx.command.name)
+        return check_block(ctx.author.id, ctx.command.name)
 
     def get_price(self, ticker):
         url = "https://ca.finance.yahoo.com/quote/{}?p=GME&.tsrc=fin-srch".format(ticker)

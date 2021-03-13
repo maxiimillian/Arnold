@@ -5,7 +5,7 @@ import sqlite3
 import os
 from discord.ext import commands
 from discord.utils import get
-from .GlobalFunctions import GlobalFunctions as GF
+from .lib import check_block
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, "db.db")
@@ -21,7 +21,7 @@ class ConfigCog(commands.Cog):
         return False
 
     async def not_blocked(ctx):
-        return GF.check_block(ctx.author.id, ctx.command.name)
+        return check_block(ctx.author.id, ctx.command.name)
 
     async def create_command_check(self, type, guild, type_id, ctx):
         conn = sqlite3.connect(db_path)
@@ -85,6 +85,20 @@ class ConfigCog(commands.Cog):
     async def dungeoned(self, ctx, role: discord.Role):
         await self.create_command_check("Dungoned", ctx.guild, role.id)
         await ctx.send(f"Set dungeond role to {role.mention}, make sure to adjust the perms!")
+
+    @set.command(pass_context=True)
+    @commands.check(has_moderator)
+    @commands.check(not_blocked)
+    async def moderator(self, ctx, role: discord.Role):
+        await self.create_command_check("Mod", ctx.guild, role.id)
+        await ctx.send(f"Added {role.mention} as a moderator")
+
+    @set.command(pass_context=True)
+    @commands.check(has_moderator)
+    @commands.check(not_blocked)
+    async def admin(self, ctx, role: discord.Role):
+        await self.create_command_check("Admin", ctx.guild, role.id)
+        await ctx.send(f"Added {role.mention} as an Admin")
 
 
 

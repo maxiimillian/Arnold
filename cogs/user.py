@@ -80,24 +80,6 @@ class UserCog(commands.Cog):
         await ctx.send("Reminder set!")
         return
 
-    @commands.command(name="td", hidden=True)
-    @commands.check(not_blocked)
-    async def td(self, ctx, type: to_lower):
-        path = os.path.abspath("Arnold/cogs/hidden.json")
-        try:
-            if type == "truth" or type == "t":
-                with open(path, 'r') as f:
-                    json_data = json.load(f)
-                    truths = json_data["truth"]
-                    await ctx.send(random.choice(truths))
-            elif type == "dare" or type == "d":
-                with open(path, 'r') as f:
-                    json_data = json.load(f)
-                    dares = json_data["dare"]
-                    await ctx.send(random.choice(dares))
-        except Exception as e:
-            await ctx.send(e)
-
     @commands.group(pass_context=True)
     @commands.check(not_blocked)
     async def todo(self, ctx):

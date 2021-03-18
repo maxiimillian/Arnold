@@ -32,8 +32,8 @@ async def clear_int(channel, param, integer):
 
 """Allows the guild owner, administrators, bot moderators, and bot administrators to use mod commands"""
 async def has_moderator(ctx):
-    mod_id   = await GF.get_id(ctx.guild, "Mod")
-    admin_id = await GF.get_id(ctx.guild, "Admin")
+    mod_id   = await get_id(ctx.guild, "Mod")
+    admin_id = await get_id(ctx.guild, "Admin")
 
     if ctx.author.id == ctx.guild.owner.id: return True
 
@@ -42,6 +42,7 @@ async def has_moderator(ctx):
             return True
 
     return False
+
 
 """Gets sensitive keys"""
 def get_value(key):

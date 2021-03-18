@@ -156,18 +156,21 @@ class ModerationCog(commands.Cog):
     @commands.check(has_moderator)
     @commands.check(not_blocked)
     async def mute(self, ctx, member: discord.Member, length, *, reason):
-        role_id = await get_id(ctx.guild, "Muted")
-        role = get(member.guild.roles, id=role_id)
+        await ctx.send("mute!")
+        try:
+            role_id = await get_id(ctx.guild, "Muted")
+            role = get(member.guild.roles, id=role_id)
 
-        await member.add_roles(role, reason=reason, atomic=True)
+            await member.add_roles(role, reason=reason, atomic=True)
 
-        await ctx.message.delete()
-        await ctx.send("{} has been muted for {}".format(member.mention, length))
+            await ctx.message.delete()
+            await ctx.send("{} has been muted for {}".format(member.mention, length))
 
-        await asyncio.sleep(self.get_length(length))
+            await asyncio.sleep(self.get_length(length))
 
-        await member.remove_roles(role, reason = "time's up ")
-
+            await member.remove_roles(role, reason = "time's up ")
+        except Exception as e:
+            await ctx.send(e)
         #await create_log(ctx.author.id, member.id, ctx.invoked_subcommand, reason)
 
 

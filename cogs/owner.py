@@ -3,6 +3,7 @@ import discord
 import asyncio
 import sqlite3
 import os
+import requests
 from .classes.UserAccount import UserAccount
 from discord.utils import get
 from discord import FFmpegPCMAudio
@@ -285,10 +286,6 @@ class OwnerCog(commands.Cog):
             await ctx.send(f"You expropriated {amount} from {user.name}")
         else:
             await ctx.send("They don't have {}".format(amount))
-
-
-
-
 
 
 def setup(bot):

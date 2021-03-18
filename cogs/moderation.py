@@ -204,7 +204,7 @@ class ModerationCog(commands.Cog):
         await member.ban(reason=reason)
         #await create_log(ctx.author.id, member.id, ctx.invoked_subcommand, reason)
 
-        await ctx.send("<a:CrabDance:776261171618643989> <a:CrabDance:776261171618643989> <a:CrabDance:776261171618643989> {} is banned! <a:CrabDance:776261171618643989> <a:CrabDance:776261171618643989> <a:CrabDance:776261171618643989>".format(member.name))
+        await ctx.send("<a:OB_pogfish:776527819093180466> <a:OB_pogfish:776527819093180466> <a:OB_pogfish:776527819093180466> {} is banned! <a:OB_pogfish:776527819093180466> <a:OB_pogfish:776527819093180466> <a:OB_pogfish:776527819093180466>".format(member.name))
 
     @commands.command(name="dungeon")
     @commands.check(has_moderator)

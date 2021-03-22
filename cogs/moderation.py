@@ -5,7 +5,7 @@ import sqlite3
 import os
 from discord.ext import commands
 from discord.utils import get
-from .lib import check_block, get_id, has_moderator
+from .lib import check_block, get_id, has_moderator, has_administrator
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, "db.db")
@@ -89,7 +89,6 @@ class ModerationCog(commands.Cog):
             except:
                 await ctx.send("You need to mention the user or type their id")
                 return
-
         try:
             user = self.bot.get_user(user_id)
             image = user.avatar_url
@@ -158,7 +157,7 @@ class ModerationCog(commands.Cog):
     async def mute(self, ctx, member: discord.Member, length, *, reason):
         await ctx.send("mute!")
         try:
-            role_id = await get_id(ctx.guild, "Muted")
+            role_id = await get_id(ctx.guild, "Mute")
             role = get(member.guild.roles, id=role_id)
 
             await member.add_roles(role, reason=reason, atomic=True)
@@ -178,7 +177,7 @@ class ModerationCog(commands.Cog):
     @commands.check(has_moderator)
     @commands.check(not_blocked)
     async def unmute(self, ctx, member: discord.Member):
-        role_id = await get_id(ctx.guild, "Muted")
+        role_id = await get_id(ctx.guild, "Mute")
         role = get(member.guild.roles, id=role_id)
 
         await member.remove_roles(role, reason = "time's up ")
@@ -189,7 +188,7 @@ class ModerationCog(commands.Cog):
 
 
     @commands.command(name="ban")
-    @commands.check(has_moderator)
+    @commands.check(has_administrator)
     @commands.check(not_blocked)
     async def ban(self, ctx, member: discord.Member, speed, *, reason):
         if member.id == 344666116456710144:
@@ -210,7 +209,7 @@ class ModerationCog(commands.Cog):
     @commands.check(has_moderator)
     @commands.check(not_blocked)
     async def dungeon(self, ctx, member: discord.Member, *, reason):
-        role_id = await get_id(ctx.guild, "Dungoned")
+        role_id = await get_id(ctx.guild, "Dungeon")
         role = get(member.guild.roles, id=role_id)
 
         await member.add_roles(role, reason=reason, atomic=True)
@@ -225,7 +224,7 @@ class ModerationCog(commands.Cog):
     @commands.check(has_moderator)
     @commands.check(not_blocked)
     async def release(self, ctx, member: discord.Member):
-        role_id = await get_id(ctx.guild, "Dungoned")
+        role_id = await get_id(ctx.guild, "Dungeon")
         role = get(member.guild.roles, id=role_id)
 
         await member.remove_roles(role, reason = "released")

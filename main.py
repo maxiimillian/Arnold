@@ -17,6 +17,8 @@ intents = discord.Intents().all()
 #Files in cogs that should be ignored on initial loading
 ignore_list = ["lib.py"]
 
+#ToDo: FIX THE HARD CODED PATHS MAKE THEM FLEXIBLE!!!!
+
 
 #==============GETS SERVER SPECIFIC PREFIX==============
 def get_prefix(bot, message):

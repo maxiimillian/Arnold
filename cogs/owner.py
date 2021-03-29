@@ -35,6 +35,7 @@ class OwnerCog(commands.Cog):
             await member.ban()
             await ctx.send("Users with the {} role have been banned!".format(role.name))
 
+
     @commands.command("dungeonrole")
     @commands.is_owner()
     async def dungeonrole(self, ctx, roleId: int):
@@ -91,9 +92,10 @@ class OwnerCog(commands.Cog):
     @commands.command(name="database")
     @commands.is_owner()
     async def database(self, ctx):
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
         for guild in self.bot.guilds:
-            conn = sqlite3.connect(db_path)
-            c = conn.cursor()
+
 
             c.execute("INSERT INTO servers (server_id, prefix) VALUES (?, ?)", (guild.id,'$',))
             conn.commit()
@@ -240,7 +242,7 @@ class OwnerCog(commands.Cog):
             conn = sqlite3.connect(db_path)
             c = conn.cursor()
 
-            c.execute("DELETE $FROM users")
+            c.execute("DELETE FROM users")
             conn.commit()
 
             for guild in self.bot.guilds:

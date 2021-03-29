@@ -37,10 +37,11 @@ bot = commands.Bot(command_prefix=get_prefix, intents=intents)
 
 #Loads the cogs
 if __name__ == '__main__':
-    for file in os.listdir("/home/pi/Arnold/cogs"):
+    path = os.path.abspath("Arnold/cogs")
+    for file in os.listdir(path):
         if file.endswith(".py") and file not in ignore_list:
             bot.load_extension(f'cogs.{file[:-3]}')
             print("Loaded: {}".format(file))
 
 
-bot.run(token, bot=True, reconnect=True)
+bot.run(token, reconnect=True)

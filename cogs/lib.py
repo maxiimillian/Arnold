@@ -63,38 +63,34 @@ def get_value(key):
 
 """Searchs the database for ids needed in commands (Muted role, moderation role, channel id, etc)"""
 async def get_id(guild, type, id: int=None):
-    try:
 
-        conn = sqlite3.connect(db_path)
-        c = conn.cursor()
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
 
-        c.execute("SELECT type_id FROM command_check WHERE server_id=? and type=?", (guild.id, type,))
-        role = c.fetchone()
+    c.execute("SELECT type_id FROM command_check WHERE server_id=? and type=?", (guild.id, type,))
+    role = c.fetchone()
 
-        if id:
-            if role:
-                c.execute("UPDATE command_check SET type_id=? WHERE server_id=? AND type=?", (id, guild.id, type,))
-
-                conn.commit()
-                return id
-            else:
-                c.execute("INSERT INTO command_check (type_id, server_id, type) VALUES (?,?,?)", (id, guild.id, type,))
-                conn.commit()
-                return id
-
+    if id:
         if role:
-            return role[0]
-        else:
-            default = get(guild.roles, name="@everyone")
-            perms = default.permissions
-            perms.update(send_messages=False)
-            role = await guild.create_role(name=type, permissions=perms)
+            c.execute("UPDATE command_check SET type_id=? WHERE server_id=? AND type=?", (id, guild.id, type,))
 
-            c.execute("INSERT INTO command_check (type_id, server_id, type) VALUES (?,?,?)", (role.id, guild.id, type,))
             conn.commit()
-            conn.close()
+            return id
+        else:
+            c.execute("INSERT INTO command_check (type_id, server_id, type) VALUES (?,?,?)", (id, guild.id, type,))
+            conn.commit()
+            return id
 
-            return role.id
+    if role:
+        return role[0]
+    else:
+        default = get(guild.roles, name="@everyone")
+        perms = default.permissions
+        perms.update(send_messages=False)
+        role = await guild.create_role(name=type, permissions=perms)
 
-    except Exception as e:
-        await channel.send(e)
+        c.execute("INSERT INTO command_check (type_id, server_id, type) VALUES (?,?,?)", (role.id, guild.id, type,))
+        conn.commit()
+        conn.close()
+
+        return role.id

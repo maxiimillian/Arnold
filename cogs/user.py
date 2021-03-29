@@ -41,6 +41,17 @@ class UserCog(commands.Cog):
         obServer = self.bot.get_guild(737104128777650217)
         names = names.split()
         response = ""
+        loopCount = 1
+        if names[0] == "list":
+            for emoji in obServer.emojis:
+                e_name = emoji.name.replace("OB_", "")
+                response = f"{response} {e_name}"
+                if loopCount % 3 == 0: response = response + "\n"
+                loopCount += 1
+            response = f"`{response}`"
+            await ctx.send(response)
+            await ctx.message.delete()
+            return
         for name in names:
             for emoji in obServer.emojis:
                 emojiName = emoji.name.replace("OB_", "")

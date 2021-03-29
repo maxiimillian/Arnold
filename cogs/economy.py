@@ -57,13 +57,16 @@ class Economy(commands.Cog):
 
     @commands.command(name="balance", aliases=["bal", "amount"])
     async def balance(self, ctx, target: discord.Member=None):
-        if target is None:
-            user = UserAccount(ctx.author.id)
-            await ctx.send("{}'s balance is {}".format(ctx.author.name, str(user.get_balance())))
-        else:
-            user = UserAccount(target.id)
-            await ctx.send("{}'s balance is {}".format(target.name, str(user.get_balance())))
-        return
+        try:
+            if target is None:
+                user = UserAccount(ctx.author.id)
+                await ctx.send("{}'s balance is {}".format(ctx.author.name, str(user.get_balance())))
+            else:
+                user = UserAccount(target.id)
+                await ctx.send("{}'s balance is {}".format(target.name, str(user.get_balance())))
+            return
+        except Exception as e:
+            await ctx.send(e)
 
     @commands.group(pass_context=True, aliases=["stocks", "s"])
     @commands.check(not_blocked)

@@ -5,7 +5,7 @@ import sqlite3
 import os
 from discord.ext import commands
 from discord.utils import get
-from .GlobalFunctions import GlobalFunctions as GF
+from .lib import check_block, get_id
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, "db.db")
@@ -21,7 +21,7 @@ class ConfigCog(commands.Cog):
         return False
 
     async def not_blocked(ctx):
-        return GF.check_block(ctx.author.id, ctx.command.name)
+        return check_block(ctx.author.id, ctx.command.name)
 
     async def create_command_check(self, type, guild, type_id, ctx):
         conn = sqlite3.connect(db_path)
@@ -71,10 +71,10 @@ class ConfigCog(commands.Cog):
     @set.command(pass_context=True)
     @commands.check(has_moderator)
     @commands.check(not_blocked)
-    async def muted(self, ctx, role: discord.Role):
+    async def mute(self, ctx, role: discord.Role):
         await ctx.send("?")
         try:
-            await self.create_command_check("Muted", ctx.guild, role.id, ctx)
+            await get_id(ctx.guild, "Mute", role.id)
             await ctx.send(f"Set muted role to {role.mention}, make sure to adjust the perms!")
         except Exception as e:
             await ctx.send(e)
@@ -82,9 +82,26 @@ class ConfigCog(commands.Cog):
     @set.command(pass_context=True)
     @commands.check(has_moderator)
     @commands.check(not_blocked)
-    async def dungeoned(self, ctx, role: discord.Role):
-        await self.create_command_check("Dungoned", ctx.guild, role.id)
+    async def dungeon(self, ctx, role: discord.Role):
+        await get_id(ctx.guild, "Dungeon", role.id)
         await ctx.send(f"Set dungeond role to {role.mention}, make sure to adjust the perms!")
+
+    @set.command(pass_context=True)
+    @commands.check(has_moderator)
+    @commands.check(not_blocked)
+    async def moderator(self, ctx, role: discord.Role):
+        try:
+            await get_id(ctx.guild, "Moderator", role.id)
+            await ctx.send(f"Added {role.mention} as a moderator")
+        except Exception as e:
+            await ctx.send(e)
+
+    @set.command(pass_context=True)
+    @commands.check(has_moderator)
+    @commands.check(not_blocked)
+    async def admin(self, ctx, role: discord.Role):
+        await get_id(ctx.guild, "Administrator", role.id)
+        await ctx.send(f"Added {role.mention} as an Admin")
 
 
 

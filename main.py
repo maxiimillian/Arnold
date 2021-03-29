@@ -1,5 +1,5 @@
 import discord
-from cogs.GlobalFunctions import GlobalFunctions as GF
+from cogs.lib import get_value
 import sqlite3
 import os
 from discord.ext import commands
@@ -9,13 +9,15 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, "cogs/db.db")
 
 #Put your token in hidden.json
-token = GF.get_value("token")
+token = get_value("token")
 
 #Allows all intents, you may want to change this for your own uses
 intents = discord.Intents().all()
 
 #Files in cogs that should be ignored on initial loading
-ignore_list = ["GlobalFunctions.py"]
+ignore_list = ["lib.py"]
+
+#ToDo: FIX THE HARD CODED PATHS MAKE THEM FLEXIBLE!!!!
 
 
 #==============GETS SERVER SPECIFIC PREFIX==============
@@ -35,10 +37,11 @@ bot = commands.Bot(command_prefix=get_prefix, intents=intents)
 
 #Loads the cogs
 if __name__ == '__main__':
-    for file in os.listdir("/home/pi/Arnold/cogs"):
+    path = os.path.abspath("Arnold/cogs")
+    for file in os.listdir(path):
         if file.endswith(".py") and file not in ignore_list:
             bot.load_extension(f'cogs.{file[:-3]}')
             print("Loaded: {}".format(file))
 
 
-bot.run(token, bot=True, reconnect=True)
+bot.run(token, reconnect=True)

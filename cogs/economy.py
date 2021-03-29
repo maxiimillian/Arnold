@@ -6,7 +6,7 @@ import os
 import requests
 import asyncio
 from lxml import html
-from .GlobalFunctions import GlobalFunctions as GF
+from .lib import check_block
 from .classes.UserAccount import UserAccount
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -17,7 +17,7 @@ class Economy(commands.Cog):
         self.bot = bot
 
     async def not_blocked(ctx):
-        return GF.check_block(ctx.author.id, ctx.command.name)
+        return check_block(ctx.author.id, ctx.command.name)
 
     def get_price(self, ticker):
         url = "https://ca.finance.yahoo.com/quote/{}?p=GME&.tsrc=fin-srch".format(ticker)
@@ -55,27 +55,18 @@ class Economy(commands.Cog):
         else:
             await ctx.send("You don't have {}".format(amount))
 
-    @commands.command(name="expropriate", aliases=["ex"])
-    @commands.is_owner()
-    async def expropriate(self, ctx, user: discord.Member, amount: int):
-        reciever = UserAccount(ctx.author.id)
-        sender = UserAccount(user.id)
-        if (sender.get_balance()) >= amount:
-            sender.change_money(amount, "remove")
-            reciever.change_money(amount, "add")
-            await ctx.send(f"You expropriated {amount} from {user.name}")
-        else:
-            await ctx.send("They don't have {}".format(amount))
-
     @commands.command(name="balance", aliases=["bal", "amount"])
     async def balance(self, ctx, target: discord.Member=None):
-        if target is None:
-            user = UserAccount(ctx.author.id)
-            await ctx.send("{}'s balance is {}".format(ctx.author.name, str(user.get_balance())))
-        else:
-            user = UserAccount(target.id)
-            await ctx.send("{}'s balance is {}".format(target.name, str(user.get_balance())))
-        return
+        try:
+            if target is None:
+                user = UserAccount(ctx.author.id)
+                await ctx.send("{}'s balance is {}".format(ctx.author.name, str(user.get_balance())))
+            else:
+                user = UserAccount(target.id)
+                await ctx.send("{}'s balance is {}".format(target.name, str(user.get_balance())))
+            return
+        except Exception as e:
+            await ctx.send(e)
 
     @commands.group(pass_context=True, aliases=["stocks", "s"])
     @commands.check(not_blocked)

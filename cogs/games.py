@@ -6,7 +6,7 @@ import asyncio
 import time
 import random
 from .classes.UserAccount import UserAccount
-from .GlobalFunctions import GlobalFunctions as GF
+from .lib import check_block
 from discord.utils import get
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -34,7 +34,7 @@ class Games(commands.Cog):
         return False
 
     async def not_blocked(ctx):
-        return GF.check_block(ctx.author.id, ctx.command.name)
+        return check_block(ctx.author.id, ctx.command.name)
 
 
     @commands.command(name="coinflip")

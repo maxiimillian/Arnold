@@ -3,8 +3,8 @@ import discord
 import asyncio
 import sqlite3
 import os
+import requests
 from .classes.UserAccount import UserAccount
-from .GlobalFunctions import GlobalFunctions as GF
 from discord.utils import get
 from discord import FFmpegPCMAudio
 from discord.ext import commands
@@ -34,6 +34,7 @@ class OwnerCog(commands.Cog):
         for member in to_ban:
             await member.ban()
             await ctx.send("Users with the {} role have been banned!".format(role.name))
+
 
     @commands.command("dungeonrole")
     @commands.is_owner()
@@ -65,7 +66,7 @@ class OwnerCog(commands.Cog):
 
     @commands.command("unblock")
     @commands.is_owner()
-    async def block(self, ctx, id: int, command):
+    async def unblock(self, ctx, id: int, command):
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
 
@@ -91,9 +92,10 @@ class OwnerCog(commands.Cog):
     @commands.command(name="database")
     @commands.is_owner()
     async def database(self, ctx):
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
         for guild in self.bot.guilds:
-            conn = sqlite3.connect(db_path)
-            c = conn.cursor()
+
 
             c.execute("INSERT INTO servers (server_id, prefix) VALUES (?, ?)", (guild.id,'$',))
             conn.commit()
@@ -197,7 +199,7 @@ class OwnerCog(commands.Cog):
             return
         else:
             await ctx.send("Suggestion doesn't exist")
-            
+
     @suggestions.command(pass_context=True)
     @commands.is_owner()
     async def delete(self, ctx, id: int):
@@ -219,6 +221,73 @@ class OwnerCog(commands.Cog):
         else:
             await ctx.send("Suggestion doesn't exist")
 
+    @commands.is_owner()
+    @commands.group(pass_context=True)
+    async def dev(self, ctx):
+        if ctx.invoked_subcommand is None:
+            msg = await ctx.send("Invalid use of dev command")
+            await asyncio.sleep(2)
+            await msg.delete()
+
+    @dev.group(pass_context=True)
+    async def reload(self, ctx):
+        if ctx.invoked_subcommand is None:
+            msg = await ctx.send("Invalid use of reload command")
+            await asyncio.sleep(2)
+            await msg.delete()
+
+    @reload.command(pass_context=True)
+    async def users(self, ctx):
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+
+            c.execute("DELETE FROM users")
+            conn.commit()
+
+            for guild in self.bot.guilds:
+                for member in guild.members:
+                    c.execute("INSERT INTO users (user_id, balance, score, pomodoro) VALUES (?,?,?,?)", (member.id, 1000, 0, 0,))
+            conn.commit()
+            await ctx.send("Done!")
+        except Exception as e:
+            await ctx.send(e)
+
+    @dev.group(pass_context=True)
+    async def give(self, ctx):
+        if ctx.invoked_subcommand is None:
+            msg = await ctx.send("Invalid use of give command")
+            await asyncio.sleep(2)
+            await msg.delete()
+
+    @give.command(pass_context=True)
+    async def stock(self, ctx, stock, shares: int, user: discord.Member):
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+
+        c.execute("INSERT INTO portfolio (ticker, shares, user_id) VALUES (?,?,?)", (stock, shares, user.id,))
+        conn.commit()
+        await ctx.send("Done!")
+
+    @give.command(pass_context=True)
+    async def money(self, ctx, amount: int, user: discord.Member):
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+
+        c.execute("UPDATE users SET balance=balance+? WHERE user_id=?", (amount, user.id,))
+        conn.commit()
+        await ctx.send("Done!")
+
+    @dev.command(pass_context=True, name="expropriate", aliases=["ex"])
+    async def expropriate(self, ctx, user: discord.Member, amount: int):
+        reciever = UserAccount(ctx.author.id)
+        sender = UserAccount(user.id)
+        if (sender.get_balance()) >= amount:
+            sender.change_money(amount, "remove")
+            reciever.change_money(amount, "add")
+            await ctx.send(f"You expropriated {amount} from {user.name}")
+        else:
+            await ctx.send("They don't have {}".format(amount))
 
 
 def setup(bot):

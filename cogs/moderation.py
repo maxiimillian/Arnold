@@ -5,7 +5,7 @@ import sqlite3
 import os
 from discord.ext import commands
 from discord.utils import get
-from .GlobalFunctions import GlobalFunctions as GF
+from .lib import check_block, get_id, has_moderator, has_administrator
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, "db.db")
@@ -56,14 +56,8 @@ class ModerationCog(commands.Cog):
 
         return milliseconds
 
-    async def has_moderator(ctx):
-        for role in ctx.author.roles:
-            if role.id == 779430696510160936  or ctx.author.id == 344666116456710144 or role.id == 769842662580027452:
-                return True
-        return False
-
     async def not_blocked(ctx):
-        return GF.check_block(ctx.author.id, ctx.command.name)
+        return check_block(ctx.author.id, ctx.command.name)
         #85,579
 
     @commands.command(name="purge")
@@ -95,7 +89,6 @@ class ModerationCog(commands.Cog):
             except:
                 await ctx.send("You need to mention the user or type their id")
                 return
-
         try:
             user = self.bot.get_user(user_id)
             image = user.avatar_url
@@ -162,18 +155,21 @@ class ModerationCog(commands.Cog):
     @commands.check(has_moderator)
     @commands.check(not_blocked)
     async def mute(self, ctx, member: discord.Member, length, *, reason):
-        role_id = await GF.get_id(ctx.guild, "Muted")
-        role = get(member.guild.roles, id=role_id)
+        await ctx.send("mute!")
+        try:
+            role_id = await get_id(ctx.guild, "Mute")
+            role = get(member.guild.roles, id=role_id)
 
-        await member.add_roles(role, reason=reason, atomic=True)
+            await member.add_roles(role, reason=reason, atomic=True)
 
-        await ctx.message.delete()
-        await ctx.send("{} has been muted for {}".format(member.mention, length))
+            await ctx.message.delete()
+            await ctx.send("{} has been muted for {}".format(member.mention, length))
 
-        await asyncio.sleep(self.get_length(length))
+            await asyncio.sleep(self.get_length(length))
 
-        await member.remove_roles(role, reason = "time's up ")
-
+            await member.remove_roles(role, reason = "time's up ")
+        except Exception as e:
+            await ctx.send(e)
         #await create_log(ctx.author.id, member.id, ctx.invoked_subcommand, reason)
 
 
@@ -181,7 +177,7 @@ class ModerationCog(commands.Cog):
     @commands.check(has_moderator)
     @commands.check(not_blocked)
     async def unmute(self, ctx, member: discord.Member):
-        role_id = await GF.get_id(ctx.guild, "Muted")
+        role_id = await get_id(ctx.guild, "Mute")
         role = get(member.guild.roles, id=role_id)
 
         await member.remove_roles(role, reason = "time's up ")
@@ -192,7 +188,7 @@ class ModerationCog(commands.Cog):
 
 
     @commands.command(name="ban")
-    @commands.check(has_moderator)
+    @commands.check(has_administrator)
     @commands.check(not_blocked)
     async def ban(self, ctx, member: discord.Member, speed, *, reason):
         if member.id == 344666116456710144:
@@ -207,13 +203,13 @@ class ModerationCog(commands.Cog):
         await member.ban(reason=reason)
         #await create_log(ctx.author.id, member.id, ctx.invoked_subcommand, reason)
 
-        await ctx.send("<a:CrabDance:776261171618643989> <a:CrabDance:776261171618643989> <a:CrabDance:776261171618643989> {} is banned! <a:CrabDance:776261171618643989> <a:CrabDance:776261171618643989> <a:CrabDance:776261171618643989>".format(member.name))
+        await ctx.send("<a:OB_pogfish:776527819093180466> <a:OB_pogfish:776527819093180466> <a:OB_pogfish:776527819093180466> {} is banned! <a:OB_pogfish:776527819093180466> <a:OB_pogfish:776527819093180466> <a:OB_pogfish:776527819093180466>".format(member.name))
 
     @commands.command(name="dungeon")
     @commands.check(has_moderator)
     @commands.check(not_blocked)
     async def dungeon(self, ctx, member: discord.Member, *, reason):
-        role_id = await GF.get_id(ctx.guild, "Dungoned")
+        role_id = await get_id(ctx.guild, "Dungeon")
         role = get(member.guild.roles, id=role_id)
 
         await member.add_roles(role, reason=reason, atomic=True)
@@ -228,7 +224,7 @@ class ModerationCog(commands.Cog):
     @commands.check(has_moderator)
     @commands.check(not_blocked)
     async def release(self, ctx, member: discord.Member):
-        role_id = await GF.get_id(ctx.guild, "Dungoned")
+        role_id = await get_id(ctx.guild, "Dungeon")
         role = get(member.guild.roles, id=role_id)
 
         await member.remove_roles(role, reason = "released")

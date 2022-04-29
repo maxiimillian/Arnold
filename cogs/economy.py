@@ -12,6 +12,8 @@ from .classes.UserAccount import UserAccount
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, "db.db")
 
+apikey = "".join(reversed("GEKSL13YXR0ZLKFT"))
+
 class Economy(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -19,14 +21,14 @@ class Economy(commands.Cog):
     async def not_blocked(ctx):
         return check_block(ctx.author.id, ctx.command.name)
 
-    def get_price(self, ticker):
-        url = "https://ca.finance.yahoo.com/quote/{}?p=GME&.tsrc=fin-srch".format(ticker)
+    def get_price(self, ticker):        
+        url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={str(ticker)}&apikey={apikey}"
         r = requests.get(url)
-
+        
         try:
-            tree = html.fromstring(r.content)
-            span = tree.xpath('//span[@class="Trsdu(0.3s) Fw(b) Fz(36px) Mb(-4px) D(ib)"]/text()')
-            price = float(span[0])
+            data = r.json()["Global Quote"]
+            symbol, price = [data[k] for k in filter(lambda k: any([x in k for x in ["symbol", "price"]]), data.keys())]
+            price = float(price)
             return price
         except:
             return -1
@@ -79,19 +81,13 @@ class Economy(commands.Cog):
     @stock.command(pass_context=True, aliases=["p"])
     @commands.check(not_blocked)
     async def price(self, ctx, ticker):
-        price = 0
-
-        url = "https://ca.finance.yahoo.com/quote/{}".format(ticker)
-        r = requests.get(url)
-
-        try:
-            tree = html.fromstring(r.content)
-            span = tree.xpath('//span[@class="Trsdu(0.3s) Fw(b) Fz(36px) Mb(-4px) D(ib)"]/text()')
-            price = float(span[0])
-        except:
+        price = self.get_price(ticker)
+        
+        if price == -1:
             await ctx.send("That stock doesn't exist")
             return
-        await ctx.send("${} is at {}".format(ticker.upper(), str(price)))
+        
+        await ctx.send(f"${str(ticker).upper()} is at {price}")
 
     @stock.command(pass_context=True, aliases=["b"])
     @commands.check(not_blocked)
@@ -102,15 +98,10 @@ class Economy(commands.Cog):
         user = UserAccount(ctx.author.id)
         balance = user.get_balance()
         ticker = ticker.upper()
+        
+        price = self.get_price(ticker)
 
-        url = "https://ca.finance.yahoo.com/quote/{}?p=GME&.tsrc=fin-srch".format(ticker)
-        r = requests.get(url)
-
-        try:
-            tree = html.fromstring(r.content)
-            span = tree.xpath('//span[@class="Trsdu(0.3s) Fw(b) Fz(36px) Mb(-4px) D(ib)"]/text()')
-            price = float(span[0])
-        except:
+        if price == -1:
             await ctx.send("That stock doesn't exist")
             return
 
@@ -142,17 +133,11 @@ class Economy(commands.Cog):
             await ctx.send("You only have {} share(s)".format(shares))
             return
 
-        url = "https://ca.finance.yahoo.com/quote/{}?p=GME&.tsrc=fin-srch".format(ticker)
-        r = requests.get(url)
-
-        try:
-            tree = html.fromstring(r.content)
-            span = tree.xpath('//span[@class="Trsdu(0.3s) Fw(b) Fz(36px) Mb(-4px) D(ib)"]/text()')
-            price = float(span[0])
-        except:
+        price = self.get_price(ticker)
+        
+        if price == -1:
             await ctx.send("That stock doesn't exist")
             return
-
 
         user.change_money(round(amount*price), "add")
         user.change_stock(ticker, amount, "sell")

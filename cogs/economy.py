@@ -1,4 +1,5 @@
 from discord.ext import commands
+from cogs.lib import get_value
 import discord
 import datetime
 import sqlite3
@@ -12,7 +13,7 @@ from .classes.UserAccount import UserAccount
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, "db.db")
 
-apikey = "".join(reversed("GEKSL13YXR0ZLKFT"))
+iexcloud_token = get_value("iexcloud_token")
 
 class Economy(commands.Cog):
     def __init__(self, bot):
@@ -21,13 +22,13 @@ class Economy(commands.Cog):
     async def not_blocked(ctx):
         return check_block(ctx.author.id, ctx.command.name)
 
-    def get_price(self, ticker):        
-        url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={str(ticker)}&apikey={apikey}"
+    def get_price(self, ticker: str):             
+        url = f"https://cloud.iexapis.com/stable/stock/{ticker.lower()}/quote?token={iexcloud_token}"
         r = requests.get(url)
-        
+
         try:
-            data = r.json()["Global Quote"]
-            symbol, price = [data[k] for k in filter(lambda k: any([x in k for x in ["symbol", "price"]]), data.keys())]
+            data = r.json()
+            symbol, price, companyName = [data[k] for k in ["symbol", "latestPrice", "companyName"]]
             price = float(price)
             return price
         except:
